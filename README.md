@@ -6,65 +6,92 @@
 
 Идея приложения: пользователь открывает его не чтобы «отметить чеклист», а чтобы посмотреть, что выпало из босса, прокачать персонажа до нового уровня или открыть новую локацию на карте. Задачи — просто способ играть.
 
+## 🚀 Демо
+
+После включения GitHub Pages (см. ниже) приложение будет доступно по адресу:
+
+**https://qArtemq.github.io/rpg/**
+
 ## Стек
 
-- **Next.js 14** (App Router) + **TypeScript**
-- **Tailwind CSS** — вся стилизация, тёмная RPG-тема по умолчанию
+- **Next.js 14** (App Router) + **TypeScript**, собран в статический сайт (`output: "export"`)
+- **Tailwind CSS** — тёмная RPG-тема
 - **Zustand** + `persist` — состояние игры и сохранение в `localStorage`
-- **Framer Motion** — анимации квестов и тостов наград
+- **Framer Motion** — анимации квестов и тостов с наградами
 - **lucide-react** — иконки
 - PWA-манифест (`public/manifest.json`) — приложение можно «установить» на телефон с сайта
 
-## Быстрый старт
+## 🌐 Деплой на GitHub Pages (автоматический)
+
+В репозитории уже настроен workflow `.github/workflows/deploy.yml`, который при каждом пуше в `main`:
+1. Ставит зависимости (`npm install`)
+2. Собирает статический сайт (`npm run build` → папка `out/`)
+3. Публикует его на GitHub Pages
+
+### Нужно включить один раз (10 секунд)
+
+1. Открой репозиторий на GitHub → **Settings → Pages**
+2. В разделе **Build and deployment → Source** выбери **GitHub Actions**
+3. Сохрани — и либо сделай любой новый коммит в `main`, либо запусти workflow вручную во вкладке **Actions → Deploy to GitHub Pages → Run workflow**
+
+После первого успешного запуска сайт появится по адресу `https://<твой-логин>.github.io/rpg/`. Следующие пуши в `main` будут обновлять его автоматически.
+
+### Как это работает технически
+
+- `output: "export"` в `next.config.js` превращает приложение в набор статических HTML/JS файлов — подходит, потому что всё приложение клиентское (без серверных API-роутов, всё состояние хранится в `localStorage` через Zustand).
+- `basePath`/`assetPrefix` выставляются автоматически **только внутри GitHub Actions** (через переменные `GITHUB_ACTIONS` / `GITHUB_REPOSITORY`), поэтому локальная разработка (`npm run dev`) не затрагивается и продолжает работать на `http://localhost:3000` без префиксов.
+- `public/.nojekyll` отключает обработку Jekyll на GitHub Pages (иначе папка `_next/` с JS-чанками будет проигнорирована).
+- Иконка и `start_url` в `public/manifest.json` используют относительные пути (`./icon.svg`, `"."`), поэтому корректно работают под под-путём `/rpg/`.
+
+## 💻 Локальная разработка
 
 ```bash
 npm install
 npm run dev
 ```
 
-Открыть [http://localhost:3000](http://localhost:3000) — приложение оптимизировано под мобильный экран (max-width 28rem), но нормально работает и на десктопе.
+Открой [http://localhost:3000](http://localhost:3000) — приложение оптимизировано под мобильный экран (max-width 28rem), но нормально работает и на десктопе.
+
+### Локальный предпросмотр ровно той сборки, что уедет на GitHub Pages
 
 ```bash
-npm run build && npm run start   # продакшн сборка
+npm run build          # соберёт статический сайт в ./out
+npm run start           # поднимет ./out как статический сервер (через serve)
 ```
 
 ## Структура проекта
 
 ```
-lifequest-rpg/
+rpg/
+├─ .github/workflows/deploy.yml  # автодеплой на GitHub Pages
 ├─ app/
 │  ├─ layout.tsx          # корневой layout + AppShell (навигация, тосты, hydration)
 │  ├─ page.tsx            # 🏠 Home — главный экран, сегодняшние квесты, босс
 │  ├─ create/page.tsx     # создание персонажа (имя + класс)
-│  ├─ quests/page.tsx     # ⚔️ все квесты по вкладкам + Epic Quests с этапами
+│  ├─ quests/page.tsx     # ⚔️ все квесты по вкладкам + Epic Quest с этапами
 │  ├─ character/page.tsx  # 🧙 характеристики, экипировка, достижения
 │  ├─ inventory/page.tsx  # 🎒 предметы и питомцы
-│  └─ world/page.tsx      # 🗺️ карта мира — регионы = категории дел
-├─ components/
-│  ├─ AppShell.tsx        # роутинг между /create и основным приложением, hydration-гейт
-│  ├─ BottomNav.tsx       # нижняя навигация (Home / World / Quests / Character / Inventory)
-│  ├─ Bar.tsx             # переиспользуемый прогресс-бар (XP, HP босса и т.д.)
-│  ├─ BossPanel.tsx       # карточка текущего босса
-│  ├─ ClassPicker.tsx     # выбор класса при создании персонажа
-│  ├─ QuestCard.tsx       # карточка квеста с анимацией выполнения
-│  ├─ StatRow.tsx         # сетка характеристик
-│  └─ ToastStack.tsx      # всплывающие уведомления о наградах / level up / победе босса
+│  └─ world/page.tsx      # 🗺️ карта мира (регионы = категории дел)
+│  └─ globals.css
+├─ components/              # AppShell, BottomNav, Bar, BossPanel, ClassPicker, QuestCard, StatRow, ToastStack
 ├─ lib/
-│  ├─ types.ts            # все TypeScript-типы (Character, Quest, Boss, Item, Pet, Achievement...)
-│  ├─ data.ts             # стартовые данные: классы, характеристики, квесты, боссы, питомцы, регионы
-│  ├─ store.ts            # Zustand store — вся игровая логика (completeQuest, rest, streaks...)
-│  └─ utils.ts            # cn(), clamp(), percent(), getIcon()
-└─ public/
-   ├─ manifest.json       # PWA-манифест
-   └─ icon.svg            # иконка приложения
+│  ├─ types.ts             # все TS-типы
+│  ├─ data.ts              # классы, характеристики, квесты, боссы, питомцы, регионы
+│  ├─ store.ts             # Zustand store — вся игровая логика (completeQuest, rest, streaks...)
+│  └─ utils.ts
+├─ public/
+│  ├─ manifest.json         # PWA-манифест
+│  ├─ icon.svg               # иконка приложения
+│  └─ .nojekyll               # отключает Jekyll на GitHub Pages
+└─ package.json / tsconfig.json / tailwind.config.ts / ...
 ```
 
-## Что уже работает (MVP)
+## 🎮 Что уже работает (MVP)
 
 - Создание персонажа: имя + класс (Воин / Маг / Разбойник), каждый даёт стартовые очки в своих базовых характеристиках
 - 8 характеристик: Vitality, Intelligence, Strength, Agility, Focus, Wealth, Discipline, Luck
 - Квесты: Daily / Weekly / Main / Side + **Epic Quest** («Путь разработчика») с этапами-чеклистом
-- Система боссов: Лень, Прокрастинация, Хаос, Долги, Экзамен — каждый следующий сложнее предыдущего; квесты наносят урон, победа даёт крупную награду
+- Система боссов: Лень → Прокрастинация → Хаос → Долги → Экзамен — каждый следующий сложнее предыдущего; квесты наносят урон, победа даёт крупную награду
 - Инвентарь: экипировка с бонусами к статам, питомцы с условиями разблокировки (streak, кол-во заданий, уровень)
 - Достижения (First Blood, Adventurer, Unstoppable, Boss Slayer, Scholar, Millionaire)
 - **Streak** с мягким прощением пропуска (1 день не сбрасывает прогресс полностью)
@@ -82,7 +109,7 @@ lifequest-rpg/
 - [ ] Магазин и зелья (XP Potion, Shield Potion, Lucky Potion)
 - [ ] Календарь в RPG-стиле и подробная статистика за неделю/месяц
 - [ ] Дерево навыков (Focus / Discipline / Speed)
-- [ ] Редактирование / добавление своих квестов через UI (сейчас список зашит в `lib/data.ts`)
+- [ ] Редактирование/добавление своих квестов через UI (сейчас список зашит в `lib/data.ts`)
 
 ## Идея проекта
 
